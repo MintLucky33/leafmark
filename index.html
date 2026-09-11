@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leafmark — Book Recommendations</title>
+<style>
+  :root {
+    --bg:#f6f1e8; --panel:#fffdf8; --text:#1f2321; --muted:#706f69; --line:#d9d2c5;
+    --accent:#43574b; --accent2:#a96745; --chip:#ebe5d9; --shadow:0 8px 30px rgba(31,35,33,.08);
+  }
+  *{box-sizing:border-box} body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--text)}
+  button,input,textarea{font:inherit} .app{max-width:1180px;margin:auto;padding:28px 20px 64px}
+  header{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:30px}
+  .brand h1{font-size:34px;margin:0;letter-spacing:-.7px}.brand p{margin:5px 0 0;color:var(--muted);font-family:Arial,sans-serif}
+  .nav{display:flex;gap:8px;flex-wrap:wrap}.nav button{border:1px solid var(--line);background:transparent;padding:9px 13px;border-radius:999px;cursor:pointer}
+  .nav button.active{background:var(--text);color:white;border-color:var(--text)}
+  .hero{background:linear-gradient(135deg,#24372f,#536a5e);color:white;border-radius:24px;padding:34px;box-shadow:var(--shadow);margin-bottom:24px}
+  .hero h2{font-size:38px;max-width:760px;margin:0 0 12px}.hero p{max-width:760px;color:#e9eee9;font-family:Arial,sans-serif;line-height:1.5}
+  .search{display:flex;gap:10px;margin-top:20px;max-width:760px}.search input{flex:1;padding:14px 16px;border:0;border-radius:12px}.search button,.primary{background:#d9b38c;border:0;padding:13px 18px;border-radius:12px;font-weight:700;cursor:pointer}
+  .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:24px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+  h3{margin-top:0}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.section-title small{color:var(--muted);font-family:Arial,sans-serif}
+  .book-list{display:grid;gap:12px}.book{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:58px 1fr auto;gap:14px;align-items:center}
+  .cover{width:58px;height:86px;object-fit:cover;border-radius:7px;background:#e8e1d5;box-shadow:0 3px 10px rgba(31,35,33,.12)}
+  .cover-placeholder{width:58px;height:86px;border-radius:7px;background:linear-gradient(145deg,#ddd4c5,#eee8de);display:grid;place-items:center;color:#8b8479;font:10px Arial,sans-serif;text-align:center;padding:5px}
+  .book h4{margin:0 0 4px}.book .meta{color:var(--muted);font:14px Arial,sans-serif}.rating{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .rating button{border:1px solid var(--line);background:white;padding:7px 9px;border-radius:9px;cursor:pointer;font:12px Arial,sans-serif}.rating button.sel{background:var(--accent);color:white;border-color:var(--accent)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:var(--chip);border-radius:999px;padding:7px 10px;font:13px Arial,sans-serif}
+  .trait{margin:14px 0}.trait-row{display:flex;justify-content:space-between;font:14px Arial,sans-serif;margin-bottom:5px}.bar{height:8px;background:#e9e3d8;border-radius:20px;overflow:hidden}.bar span{display:block;height:100%;background:var(--accent);border-radius:20px}
+  .recommendations{margin-top:24px}.rec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.rec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+  .rec-head{display:grid;grid-template-columns:72px 1fr;gap:14px;align-items:start;margin-bottom:12px}.rec .cover,.rec .cover-placeholder{width:72px;height:108px}
+  .score{font:700 13px Arial,sans-serif;color:var(--accent2)}.rec h4{font-size:21px;margin:6px 0}.rec p{font:14px/1.5 Arial,sans-serif;color:#454640}.rec .risk{border-top:1px solid var(--line);padding-top:10px;margin-top:10px;color:#725341}
+  .empty{color:var(--muted);font-family:Arial,sans-serif;font-style:italic}.note{font:13px/1.5 Arial,sans-serif;color:var(--muted)}
+  textarea{width:100%;min-height:95px;border:1px solid var(--line);border-radius:12px;padding:12px;background:white}
+  .hidden{display:none}.footer-note{margin-top:24px;text-align:center;color:var(--muted);font:13px Arial,sans-serif}
+  @media(max-width:850px){.grid,.rec-grid{grid-template-columns:1fr}.hero h2{font-size:30px}.book{grid-template-columns:58px 1fr}.book .rating{grid-column:1/-1;justify-content:flex-start}header{align-items:flex-start;flex-direction:column}}
+
+  .brand-leaves{display:inline-flex;gap:1px;align-items:center;margin-left:5px;font-size:.78em;vertical-align:middle}
+  .leaf-red,.leaf-orange{display:inline-block;line-height:1}
+
+  .book{cursor:pointer}
+  .book:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(31,35,33,.08)}
+  .detail-overlay{position:fixed;inset:0;background:rgba(33,31,28,.42);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+  .detail-overlay.open{display:flex}
+  .detail-card{width:min(760px,96vw);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 60px rgba(31,35,33,.22);padding:24px}
+  .detail-top{display:grid;grid-template-columns:110px 1fr auto;gap:18px;align-items:start}
+  .detail-top .cover,.detail-top .cover-placeholder{width:110px;height:165px}
+  .detail-close{border:0;background:transparent;font-size:26px;line-height:1;cursor:pointer;color:var(--muted)}
+  .detail-card h2{margin:0 0 4px;font-size:30px}
+  .detail-author{color:var(--muted);font:15px Arial,sans-serif}
+  .detail-section{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+  .detail-section h3{margin:0 0 10px;font-size:18px}
+  .detail-note{width:100%;min-height:120px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fffdfa;font:15px/1.5 Arial,sans-serif;color:var(--text)}
+  .trait-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .trait-chip{background:#efe8dc;border:1px solid #ddd2c3;border-radius:999px;padding:7px 10px;font:600 12px Arial,sans-serif;color:#544f47}
+  .insight-box{background:#f4efe6;border-radius:12px;padding:14px 16px;font:14px/1.55 Arial,sans-serif;color:#454640}
+  .detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+  .detail-recs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .detail-rec{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fffdfa}
+  .detail-rec-top{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:start}
+  .detail-rec .cover,.detail-rec .cover-placeholder{width:54px;height:81px}
+  .detail-rec h4{margin:1px 0 4px;font-size:16px;line-height:1.15}
+  .detail-rec-author{font:12px Arial,sans-serif;color:var(--muted)}
+  .detail-rec p{font:13px/1.45 Arial,sans-serif;color:#454640;margin:10px 0 0}
+  @media(max-width:650px){.detail-recs{grid-template-columns:1fr}}
+
+  .search-wrap{position:relative;max-width:760px}
+  .search{max-width:none}
+  .search-results{position:absolute;left:0;right:0;top:calc(100% + 7px);background:#fffdf8;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 36px rgba(31,35,33,.16);z-index:30;overflow:hidden;display:none}
+  .search-results.open{display:block}
+  .search-result{display:grid;grid-template-columns:42px 1fr auto;gap:11px;align-items:center;padding:10px 12px;border-bottom:1px solid #ece5d9;cursor:pointer}
+  .search-result:last-child{border-bottom:0}
+  .search-result:hover,.search-result.active{background:#f4efe6}
+  .search-result img,.search-result-cover{width:42px;height:62px;object-fit:cover;border-radius:5px;background:#e8e1d5}
+  .search-result-title{font-weight:700;font-size:15px}
+  .search-result-meta{font:12px Arial,sans-serif;color:var(--muted);margin-top:3px}
+  .search-result-year{font:12px Arial,sans-serif;color:var(--muted);white-space:nowrap}
+  .search-status{padding:12px 14px;font:13px Arial,sans-serif;color:var(--muted)}
+  .book-controls{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .delete-book{border:1px solid #d6b9ad!important;background:#fff8f5!important;color:#8a4937!important}
+  .delete-book:hover{background:#fbece6!important}
+  .detail-delete{margin-top:10px;border:1px solid #d6b9ad;background:#fff8f5;color:#8a4937;padding:8px 11px;border-radius:9px;cursor:pointer;font:12px Arial,sans-serif}
+  @media(max-width:850px){.book-controls{grid-column:1/-1;justify-content:flex-start}}
+
+
+  .analysis-status{margin-top:8px;font:12px Arial,sans-serif;color:var(--muted);min-height:16px}
+  .analysis-status.busy::before{content:"";display:inline-block;width:9px;height:9px;border:2px solid #c9c1b5;border-top-color:#6d665e;border-radius:50%;margin-right:7px;vertical-align:-1px;animation:leafspin .8s linear infinite}
+  @keyframes leafspin{to{transform:rotate(360deg)}}
+  .ai-connect{margin-top:10px;display:flex;justify-content:center;gap:8px;align-items:center;flex-wrap:wrap;font:12px Arial,sans-serif;color:var(--muted)}
+  .ai-connect button{padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;color:var(--text)}
+  .keyword-heading{margin:14px 0 3px;font:700 14px Arial,sans-serif;color:var(--text)}
+  .keyword-help{font:12px Arial,sans-serif;color:var(--muted);margin-bottom:9px}
+  .keyword-suggestions,.selected-keywords{display:flex;flex-wrap:wrap;gap:7px}
+  .keyword-chip{border:1px solid #d8d0c4;background:#fffdfa;color:#514f49;border-radius:999px;padding:7px 10px;cursor:pointer;font:600 12px Arial,sans-serif}
+  .keyword-chip:hover{background:#f4efe6}
+  .keyword-chip.selected.positive{background:#e7f3e9;border-color:#97b99f;color:#28563a}
+  .keyword-chip.selected.negative{background:#f7e6e3;border-color:#c9a09a;color:#7a3128}
+  .keyword-search{display:flex;gap:8px;margin-top:10px;position:relative}
+  .keyword-search input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:#fffdfa;padding:9px 11px;font:13px Arial,sans-serif;color:var(--text)}
+  .keyword-search button{border:1px solid var(--line);border-radius:10px;background:#efe8dc;padding:9px 12px;cursor:pointer;font:700 12px Arial,sans-serif;color:var(--text)}
+  .quality-dropdown{background:#fffdfa;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.08);display:none;max-height:190px;overflow:auto;margin-top:6px}
+  .quality-dropdown.open{display:block}
+  .quality-option{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 11px;cursor:pointer;font:13px Arial,sans-serif;color:var(--text)}
+  .quality-option:hover{background:#f4efe6}
+  .sentiment-picker{display:none;margin-top:10px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#faf7f1;align-items:center;gap:8px;flex-wrap:wrap;font:12px Arial,sans-serif}
+  .sentiment-picker.open{display:flex}
+  .sentiment-picker strong{margin-right:auto}
+  .sentiment-picker button{border-radius:999px;padding:7px 10px;cursor:pointer;font:700 12px Arial,sans-serif}
+  .sentiment-like{background:#e7f3e9;border:1px solid #97b99f;color:#28563a}
+  .sentiment-dislike{background:#f7e6e3;border:1px solid #c9a09a;color:#7a3128}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><h1>Leafmark <span class="brand-leaves"><span class="leaf-red">🍂</span><span class="leaf-orange">🍁</span></span></h1><p>Recommendations tailored for your shelf.</p></div>
+    <div class="nav"><button class="active" data-view="home">Library</button><button data-view="profile">Reader Profile</button><button data-view="recommendations">Recommendations</button></div>
+  </header>
+
+  <section class="hero">
+    <h2>Start your reading nook</h2>
+    
+    <div class="search-wrap">
+      <div class="search"><input id="bookSearch" placeholder="Enter a title or an author" autocomplete="off" /><button id="addBook">Search</button></div>
+      <div class="search-results" id="searchResults" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <main id="homeView">
+    <div class="grid">
+      <section class="card">
+        <div class="section-title"><h3>Your books</h3><small id="ratedCount">0 rated</small></div>
+        <div id="bookList" class="book-list"></div>
+      </section>
+      <aside class="card">
+        <h3>What the model thinks so far</h3>
+        <div class="chips" id="profileChips"></div>
+        <div id="traitBars"></div>
+        <p class="note">These are working hypotheses, not permanent labels. Future versions will track confidence and the evidence behind each inference.</p>
+      </aside>
+    </div>
+
+    <section class="recommendations">
+      <div class="section-title"><h3>Early recommendations</h3><small>Prototype logic</small></div>
+      <div class="rec-grid" id="recGrid"></div>
+    </section>
+  </main>
+
+  <main id="profileView" class="hidden">
+    <section class="card">
+      <h3>Reader Profile</h3>
+      <p class="note">This is the editable human-readable layer. Later, AI will generate and revise this from ratings and follow-up questions.</p>
+      <textarea id="profileText"></textarea>
+      <div style="margin-top:12px"><button class="primary" id="saveProfile">Save profile note</button></div>
+    </section>
+  </main>
+
+  <main id="recommendationsView" class="hidden">
+    <section class="card">
+      <h3>Recommendations</h3>
+      <p class="note">This will eventually rank a large catalog using your taste profile, then explain both the likely appeal and the likely failure point.</p>
+      <div class="rec-grid" id="recGrid2"></div>
+    </section>
+  </main>
+
+  <div class="footer-note">Prototype — your shelf is stored in this browser. Book lookup is powered by Open Library.
+    <div class="ai-connect"><span id="aiConnectionLabel">AI analysis: not connected</span><button id="setAiEndpoint" type="button">Connect AI</button></div>
+  </div>
+</div>
+<div class="detail-overlay" id="detailOverlay" aria-hidden="true">
+  <div class="detail-card" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="detail-top">
+      <div id="detailCover"></div>
+      <div>
+        <h2 id="detailTitle">As I Lay Dying</h2>
+        <div class="detail-author" id="detailAuthor">William Faulkner</div>
+        <div class="detail-actions" id="detailRating"></div>
+        <button class="detail-delete" id="detailDelete">Delete from shelf</button>
+      </div>
+      <button class="detail-close" id="detailClose" aria-label="Close">×</button>
+    </div>
+
+    <div class="detail-section">
+      <h3>My thoughts</h3>
+      <textarea class="detail-note" id="detailNote"></textarea>
+      <div class="keyword-heading">What stood out? <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+      <div class="keyword-help">Tap anything that mattered to your experience.</div>
+      <div class="keyword-suggestions" id="keywordSuggestions"></div>
+      <div class="keyword-search">
+        <input id="keywordSearch" type="text" placeholder="Find another quality…" autocomplete="off" />
+        <button id="keywordAdd" type="button">Add</button>
+      </div>
+      <div class="quality-dropdown" id="qualityDropdown"></div>
+      <div class="sentiment-picker" id="sentimentPicker">
+        <span>How did <strong id="sentimentQuality"></strong> work for you?</span>
+        <button type="button" class="sentiment-like" id="sentimentLike">Liked it</button>
+        <button type="button" class="sentiment-dislike" id="sentimentDislike">Didn't like it</button>
+      </div>
+      <div class="selected-keywords" id="selectedKeywords" style="margin-top:9px"></div>
+      <div class="analysis-status" id="analysisStatus"></div>
+    </div>
+    <div class="detail-section">
+      <h3 id="guessHeading">What you think about this book</h3>
+      <div class="insight-box" id="detailGuess"></div>
+    </div>
+    <div class="detail-section">
+      <h3>Recommendations</h3>
+      <div class="detail-recs" id="detailRecommendations"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const seedBooks = [
+  ['The Heart Is a Lonely Hunter','Carson McCullers','Loved'],['As I Lay Dying','William Faulkner','Loved'],['The End of the Affair','Graham Greene','Loved'],
+  ['White Noise','Don DeLillo','Loved'],['Catch-22','Joseph Heller','Loved'],['The Sun Also Rises','Ernest Hemingway','Loved'],['Klara and the Sun','Kazuo Ishiguro','Loved'],
+  ['East of Eden','John Steinbeck','Loved'],['Treasure Island','Robert Louis Stevenson','Loved'],['Don Quixote','Miguel de Cervantes','Loved'],
+  ['Hard Rain Falling','Don Carpenter','Okay'],['Hello Beautiful','Ann Napolitano','Okay'],['Death Comes for the Archbishop','Willa Cather','Okay'],
+  ['The Unbearable Lightness of Being','Milan Kundera','Okay'],['In the Distance','Hernan Diaz','Okay'],['The Catcher in the Rye','J. D. Salinger','Disliked'],
+  ['Wise Blood','Flannery O’Connor','Disliked'],['On the Road','Jack Kerouac','Disliked'],['Across the River and into the Trees','Ernest Hemingway','Disliked'],['A Passage to India','E. M. Forster','Disliked'],
+  ['Stoner','John Williams','Liked'],['The Moviegoer','Walker Percy','Okay'],['Revolutionary Road','Richard Yates','Liked'],['A Prayer for Owen Meany','John Irving','Liked']
+].map((b,i)=>({id:i+1,title:b[0],author:b[1],rating:b[2]}));
+
+const defaultProfile = {
+  chips:['Character investment','Subtext','Moral complexity','Emotional coherence','Satire with purpose','Form-content integration'],
+  traits:[['Character dimensionality',96],['Subtext',98],['Ending coherence',92],['Philosophical engagement',84],['Narrative movement',82],['Experimentation tolerance',72]],
+  note:'I value characters who feel dimensional and human, even when they are not likable or relatable. I respond strongly to subtext, symbolism, emotionally coherent relationships, serious satire, and form that carries meaning. I can tolerate sparse or experimental writing when I understand what it is doing. Endings matter a great deal.'
+};
+const recommendations=[
+  {title:'The Remains of the Day',author:'Kazuo Ishiguro',score:'Very strong match',why:'Deep character investment, emotional restraint, self-deception and enormous amounts of meaning beneath what is spoken.',risk:'Risk: the restraint may feel too sealed-off if Stevens never becomes emotionally real to you.'},
+  {title:'A Month in the Country',author:'J. L. Carr',score:'Strong match',why:'Quiet on the surface but emotionally active underneath; memory, loneliness and recovery emerge through implication rather than explanation.',risk:'Risk: the novel is slight and depends heavily on whether its atmosphere catches you.'},
+  {title:'The Sound and the Fury',author:'William Faulkner',score:'Strong match',why:'Family disintegration, multiple consciousnesses, symbolic structure and a tremendous amount of interpretive work left to the reader.',risk:'Risk: much more difficult and opaque than As I Lay Dying.'}
+];
+let books = JSON.parse(localStorage.getItem('understory-books')||'null') || seedBooks;
+let profileNote = localStorage.getItem('leafmark-profile') || defaultProfile.note;
+const ratings=['Loved','Liked','Okay','Disliked'];
+
+function save(){localStorage.setItem('understory-books',JSON.stringify(books));}
+function coverMarkup(book){
+  if(book.coverUrl) return `<img class="cover" src="${escapeHtml(book.coverUrl)}" alt="Cover of ${escapeHtml(book.title)}">`;
+  return `<div class="cover-placeholder">Finding cover…</div>`;
+}
+async function fetchCover(book){
+  if(book.coverUrl || book.coverChecked) return;
+  try{
+    const q=new URLSearchParams({title:book.title,limit:'1'});
+    if(book.author) q.set('author',book.author);
+    const res=await fetch(`https://openlibrary.org/search.json?${q}`);
+    const data=await res.json(), hit=data.docs?.[0];
+    if(hit?.cover_i) book.coverUrl=`https://covers.openlibrary.org/b/id/${hit.cover_i}-M.jpg`;
+  }catch(e){ console.warn('Cover lookup failed:',book.title); }
+  book.coverChecked=true;
+}
+async function loadMissingCovers(items){
+  for(const book of items.filter(b=>!b.coverUrl && !b.coverChecked)) await fetchCover(book);
+  save(); renderBooks(); renderRecs();
+}
+function renderBooks(){
+  const list=document.getElementById('bookList'); list.innerHTML='';
+  books.forEach(book=>{
+    const el=document.createElement('div'); el.className='book';
+    el.innerHTML=`${coverMarkup(book)}
+      <div><h4>${escapeHtml(book.title)}</h4><div class="meta">${escapeHtml(book.author||'Author unknown')}${book.firstPublishYear?` · ${book.firstPublishYear}`:''}</div></div>
+      <div class="book-controls">
+        <div class="rating">${ratings.map(r=>`<button class="${book.rating===r?'sel':''}" data-id="${book.id}" data-rating="${r}">${r}</button>`).join('')}</div>
+        <button class="delete-book" data-delete-id="${book.id}" title="Delete ${escapeHtml(book.title)}">Delete</button>
+      </div>`;
+    el.addEventListener('click',e=>{
+      if(e.target.closest('button')) return;
+      openBookDetail(book);
+    });
+    list.appendChild(el);
+  });
+  document.getElementById('ratedCount').textContent=`${books.filter(b=>b.rating).length} rated`;
+  list.querySelectorAll('[data-rating]').forEach(btn=>btn.onclick=e=>{
+    e.stopPropagation();
+    const b=books.find(x=>String(x.id)===btn.dataset.id);
+    if(!b)return;
+    b.rating=btn.dataset.rating; save(); renderBooks();
+  });
+  list.querySelectorAll('[data-delete-id]').forEach(btn=>btn.onclick=e=>{
+    e.stopPropagation();
+    const b=books.find(x=>String(x.id)===btn.dataset.deleteId);
+    if(b) deleteBook(b);
+  });
+}
+function renderProfile(){
+ document.getElementById('profileChips').innerHTML=defaultProfile.chips.map(c=>`<span class="chip">${c}</span>`).join('');
+ document.getElementById('traitBars').innerHTML=defaultProfile.traits.map(([n,v])=>`<div class="trait"><div class="trait-row"><span>${n}</span><strong>${v}</strong></div><div class="bar"><span style="width:${v}%"></span></div></div>`).join('');
+ document.getElementById('profileText').value=profileNote;
+}
+function renderRecs(){
+ const html=recommendations.map(r=>`<article class="rec"><div class="rec-head">${coverMarkup(r)}<div><div class="score">${r.score}</div><h4>${r.title}</h4><div class="meta">${r.author}</div></div></div><p>${r.why}</p><p class="risk">${r.risk}</p></article>`).join('');
+ document.getElementById('recGrid').innerHTML=html; document.getElementById('recGrid2').innerHTML=html;
+}
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));}
+
+const searchInput=document.getElementById('bookSearch');
+const searchResults=document.getElementById('searchResults');
+const searchButton=document.getElementById('addBook');
+let liveSearchTimer=null;
+let liveSearchItems=[];
+let activeSearchIndex=-1;
+
+function resultCoverUrl(item){
+  return item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-S.jpg` : '';
+}
+function resultMediumCoverUrl(item){
+  return item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-M.jpg` : '';
+}
+function renderSearchResults(items,message=''){
+  liveSearchItems=items||[];
+  activeSearchIndex=-1;
+  if(message){
+    searchResults.innerHTML=`<div class="search-status">${escapeHtml(message)}</div>`;
+    searchResults.classList.add('open');
+    return;
+  }
+  if(!liveSearchItems.length){
+    searchResults.innerHTML='<div class="search-status">No matching books found.</div>';
+    searchResults.classList.add('open');
+    return;
+  }
+  searchResults.innerHTML=liveSearchItems.map((item,i)=>{
+    const author=item.author_name?.[0]||'Author unknown';
+    const cover=resultCoverUrl(item);
+    return `<div class="search-result" data-search-index="${i}">
+      ${cover?`<img src="${cover}" alt="">`:'<div class="search-result-cover"></div>'}
+      <div><div class="search-result-title">${escapeHtml(item.title)}</div><div class="search-result-meta">${escapeHtml(author)}</div></div>
+      <div class="search-result-year">${item.first_publish_year||''}</div>
+    </div>`;
+  }).join('');
+  searchResults.classList.add('open');
+  searchResults.querySelectorAll('[data-search-index]').forEach(row=>{
+    row.onclick=()=>selectSearchResult(Number(row.dataset.searchIndex));
+  });
+}
+async function searchBooks(){
+  const q=searchInput.value.trim();
+  if(q.length<2){searchResults.classList.remove('open');return;}
+  renderSearchResults([], 'Searching Open Library…');
+  try{
+    const params=new URLSearchParams({
+      q,
+      limit:'8',
+      fields:'key,title,author_name,first_publish_year,cover_i,isbn'
+    });
+    const res=await fetch(`https://openlibrary.org/search.json?${params.toString()}`);
+    if(!res.ok) throw new Error(`Search failed: ${res.status}`);
+    const data=await res.json();
+    renderSearchResults((data.docs||[]).slice(0,8));
+  }catch(err){
+    console.error(err);
+    renderSearchResults([], 'Book lookup could not connect. On the hosted Leafmark site this search uses Open Library live.');
+  }
+}
+function selectSearchResult(i){
+  const item=liveSearchItems[i];
+  if(!item)return;
+  const olKey=(item.key||'').replace('/works/','');
+  const existing=books.find(b=>b.openLibraryKey && b.openLibraryKey===olKey);
+  if(existing){
+    searchInput.value='';
+    searchResults.classList.remove('open');
+    openBookDetail(existing);
+    return;
+  }
+  const book={
+    id:Date.now(),
+    title:item.title,
+    author:item.author_name?.[0]||'',
+    firstPublishYear:item.first_publish_year||null,
+    isbn:item.isbn?.[0]||null,
+    openLibraryKey:olKey||null,
+    coverUrl:resultMediumCoverUrl(item)||null,
+    coverChecked:true,
+    rating:null,
+    thoughts:''
+  };
+  books.unshift(book);
+  save();
+  renderBooks();
+  searchInput.value='';
+  searchResults.classList.remove('open');
+  openBookDetail(book);
+  hydrateBookDetails(book);
+}
+searchButton.onclick=searchBooks;
+searchInput.addEventListener('input',()=>{
+  clearTimeout(liveSearchTimer);
+  const q=searchInput.value.trim();
+  if(q.length<2){searchResults.classList.remove('open');return;}
+  liveSearchTimer=setTimeout(searchBooks,320);
+});
+searchInput.addEventListener('keydown',e=>{
+  const rows=[...searchResults.querySelectorAll('.search-result')];
+  if(e.key==='ArrowDown' && rows.length){
+    e.preventDefault(); activeSearchIndex=Math.min(activeSearchIndex+1,rows.length-1);
+  }else if(e.key==='ArrowUp' && rows.length){
+    e.preventDefault(); activeSearchIndex=Math.max(activeSearchIndex-1,0);
+  }else if(e.key==='Enter'){
+    e.preventDefault();
+    if(activeSearchIndex>=0 && liveSearchItems[activeSearchIndex]) selectSearchResult(activeSearchIndex);
+    else searchBooks();
+    return;
+  }else if(e.key==='Escape'){
+    searchResults.classList.remove('open'); return;
+  }else return;
+  rows.forEach((r,i)=>r.classList.toggle('active',i===activeSearchIndex));
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search-wrap')) searchResults.classList.remove('open');
+});
+
+function deleteBook(book){
+  if(!book) return;
+  const ok=confirm(`Delete "${book.title}" from your Leafmark shelf?`);
+  if(!ok)return;
+  books=books.filter(b=>String(b.id)!==String(book.id));
+  save();
+  renderBooks();
+  if(detailOverlay?.classList.contains('open')) detailClose.click();
+}
+
+document.getElementById('saveProfile').onclick=()=>{profileNote=document.getElementById('profileText').value;localStorage.setItem('leafmark-profile',profileNote);};
+document.querySelectorAll('.nav button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');['home','profile','recommendations'].forEach(v=>document.getElementById(v+'View').classList.toggle('hidden',v!==btn.dataset.view));});
+renderBooks();renderProfile();renderRecs();loadMissingCovers([...books,...recommendations]);
+
+
+
+
+const DEFAULT_AI_ENDPOINT='';
+let aiEndpoint=localStorage.getItem('leafmark-ai-endpoint')||DEFAULT_AI_ENDPOINT;
+let analysisTimer=null;
+let analysisRequestId=0;
+
+function normalizeEndpoint(url){
+  url=(url||'').trim().replace(/\/$/,'');
+  if(!url) return '';
+  return url.endsWith('/api/analyze')?url:`${url}/api/analyze`;
+}
+function updateAiConnectionUi(){
+  const label=document.getElementById('aiConnectionLabel');
+  const btn=document.getElementById('setAiEndpoint');
+  if(!label||!btn)return;
+  label.textContent=aiEndpoint?'AI analysis: connected':'AI analysis: not connected';
+  btn.textContent=aiEndpoint?'Change AI connection':'Connect AI';
+}
+function setAnalysisStatus(text,busy=false){
+  const el=document.getElementById('analysisStatus');
+  if(!el)return;
+  el.textContent=text||'';
+  el.classList.toggle('busy',!!busy);
+}
+function normalizeKeywords(list){
+  return (Array.isArray(list)?list:[]).map(item=>{
+    if(typeof item==='string') return {label:item,sentiment:'positive'};
+    return {label:String(item?.label||'').trim(),sentiment:item?.sentiment==='negative'?'negative':'positive'};
+  }).filter(x=>x.label);
+}
+function shelfContext(excludeId){
+  return books.filter(b=>String(b.id)!==String(excludeId)).slice(0,20).map(b=>({
+    title:b.title,author:b.author||'',rating:b.rating||'',thoughts:(b.thoughts||'').slice(0,500),keywords:normalizeKeywords(b.keywords).slice(0,8)
+  }));
+}
+async function hydrateBookDetails(book){
+  if(!book?.openLibraryKey || book.workDetailsLoaded) return;
+  try{
+    const res=await fetch(`https://openlibrary.org/works/${book.openLibraryKey}.json`);
+    if(!res.ok) return;
+    const data=await res.json();
+    const desc=typeof data.description==='string'?data.description:(data.description?.value||'');
+    book.description=desc.slice(0,2500);
+    book.subjects=(data.subjects||[]).slice(0,16);
+    book.workDetailsLoaded=true;
+    save();
+    if(activeDetailBook===book && aiEndpoint) scheduleAiAnalysis(book,150);
+  }catch(e){ console.warn('Could not load Open Library work details',e); }
+}
+const qualityTaxonomy=[
+  'Character depth','Character development','Complex characters','Moral ambiguity','Unlikable characters','Relationships','Family dynamics','Friendship','Marriage','Father-son relationship','Mother-daughter relationship','Romance','Loneliness','Grief','Longing','Isolation','Identity','Self-invention','Faith','Religion','Religious doubt','Religious criticism','Spirituality','Theology','Mortality','Fear of death','Meaning','Existentialism','Social criticism','Class','Consumerism','War','Memory','Coming of age','Dark humor','Satire','Absurdity','Prose','Sparse prose','Poetic prose','Dense prose','Dialogue','Voice','Multiple perspectives','Unreliable narrator','Subtext','Symbolism','Structure','Experimental structure','Pacing','Slow pacing','Fast pacing','Plot','Ending','Atmosphere','Southern Gothic','Setting','Emotional intensity','Emotional restraint','Sentimentality','Suspense','Fantasy','Magical realism','Magic','Horror','Speculative elements','Realism','Philosophy'
+];
+const learnedQualityKey='leafmark-learned-quality-vocabulary';
+let learnedQualityVocabulary=[];
+try{ learnedQualityVocabulary=JSON.parse(localStorage.getItem(learnedQualityKey)||'[]'); }catch(e){ learnedQualityVocabulary=[]; }
+function cleanQualityLabel(value){
+  return String(value||'').trim().replace(/\s+/g,' ').slice(0,60);
+}
+function rememberQualityTerms(items){
+  const merged=[...learnedQualityVocabulary];
+  for(const raw of (Array.isArray(items)?items:[])){
+    const label=cleanQualityLabel(typeof raw==='string'?raw:raw?.label);
+    if(label && !merged.some(x=>x.toLowerCase()===label.toLowerCase())) merged.push(label);
+  }
+  learnedQualityVocabulary=merged.slice(-500);
+  try{ localStorage.setItem(learnedQualityKey,JSON.stringify(learnedQualityVocabulary)); }catch(e){}
+}
+function qualityVocabulary(book){
+  const pool=[...qualityTaxonomy,...learnedQualityVocabulary];
+  for(const b of books){
+    for(const k of normalizeKeywords(b.keywords)) pool.push(k.label);
+    if(Array.isArray(b.aiAnalysis?.suggested_keywords)) pool.push(...b.aiAnalysis.suggested_keywords);
+  }
+  if(Array.isArray(book?.aiAnalysis?.suggested_keywords)) pool.push(...book.aiAnalysis.suggested_keywords);
+  const unique=[];
+  for(const raw of pool){
+    const label=cleanQualityLabel(raw);
+    if(label && !unique.some(x=>x.toLowerCase()===label.toLowerCase())) unique.push(label);
+  }
+  return unique;
+}
+// Learn from anything already stored on the shelf on page load.
+rememberQualityTerms(books.flatMap(b=>[
+  ...normalizeKeywords(b.keywords).map(k=>k.label),
+  ...(Array.isArray(b.aiAnalysis?.suggested_keywords)?b.aiAnalysis.suggested_keywords:[])
+]));
+function keywordCandidates(book){
+  const ai=book?.aiAnalysis?.suggested_keywords;
+  const base=(Array.isArray(ai)&&ai.length?ai:traitsFor(book)).filter(Boolean);
+  const selected=new Set(normalizeKeywords(book?.keywords).map(k=>k.label.toLowerCase()));
+  const unique=[];
+  for(const item of base){
+    const text=String(item).trim();
+    if(!text || selected.has(text.toLowerCase()) || unique.some(x=>x.toLowerCase()===text.toLowerCase())) continue;
+    unique.push(text);
+    if(unique.length===5) break;
+  }
+  const fallbacks=['Character depth','Prose','Relationships','Themes','Atmosphere'];
+  for(const item of fallbacks){
+    if(unique.length===5) break;
+    if(!selected.has(item.toLowerCase()) && !unique.some(x=>x.toLowerCase()===item.toLowerCase())) unique.push(item);
+  }
+  return unique.slice(0,5);
+}
+let pendingQuality='';
+function renderKeywords(book){
+  const suggestions=document.getElementById('keywordSuggestions');
+  const selectedEl=document.getElementById('selectedKeywords');
+  if(!suggestions||!selectedEl)return;
+  const selected=normalizeKeywords(book.keywords);
+  book.keywords=selected;
+  suggestions.innerHTML=keywordCandidates(book).map(k=>`<button type="button" class="keyword-chip" data-keyword-suggestion="${escapeHtml(k)}">${escapeHtml(k)}</button>`).join('');
+  selectedEl.innerHTML=selected.map(k=>`<button type="button" class="keyword-chip selected ${k.sentiment}" data-keyword-remove="${escapeHtml(k.label)}" title="Remove ${escapeHtml(k.label)}">${escapeHtml(k.label)} ×</button>`).join('');
+  suggestions.querySelectorAll('[data-keyword-suggestion]').forEach(btn=>btn.onclick=()=>beginKeywordSentiment(btn.dataset.keywordSuggestion));
+  selectedEl.querySelectorAll('[data-keyword-remove]').forEach(btn=>btn.onclick=()=>removeKeyword(book,btn.dataset.keywordRemove));
+}
+function beginKeywordSentiment(raw){
+  const keyword=String(raw||'').trim().slice(0,40);
+  if(!keyword)return;
+  pendingQuality=keyword;
+  document.getElementById('sentimentQuality').textContent=keyword;
+  document.getElementById('sentimentPicker').classList.add('open');
+  document.getElementById('qualityDropdown').classList.remove('open');
+}
+function addKeyword(book,raw,sentiment){
+  const keyword=String(raw||'').trim().slice(0,40);
+  if(!keyword)return;
+  const normalized=normalizeKeywords(book.keywords);
+  const existing=normalized.find(k=>k.label.toLowerCase()===keyword.toLowerCase());
+  if(existing) existing.sentiment=sentiment==='negative'?'negative':'positive';
+  else normalized.push({label:keyword,sentiment:sentiment==='negative'?'negative':'positive'});
+  book.keywords=normalized;
+  rememberQualityTerms([keyword]);
+  pendingQuality='';
+  document.getElementById('sentimentPicker').classList.remove('open');
+  save(); renderKeywords(book); renderAnalysis(book); scheduleAiAnalysis(book,250);
+}
+function removeKeyword(book,raw){
+  book.keywords=normalizeKeywords(book.keywords).filter(k=>k.label.toLowerCase()!==String(raw||'').toLowerCase());
+  save(); renderKeywords(book); renderAnalysis(book); scheduleAiAnalysis(book,250);
+}
+function qualityMatches(query,book){
+  const q=String(query||'').trim().toLowerCase();
+  if(!q)return [];
+  const selected=new Set(normalizeKeywords(book.keywords).map(k=>k.label.toLowerCase()));
+  const tokens=q.split(/\s+/).filter(Boolean);
+  return qualityVocabulary(book).filter(item=>{
+    const text=item.toLowerCase();
+    return !selected.has(text) && tokens.every(t=>text.includes(t));
+  }).sort((a,b)=>{
+    const al=a.toLowerCase(), bl=b.toLowerCase();
+    const ar=al===q?0:al.startsWith(q)?1:al.split(/\s+/).some(w=>w.startsWith(q))?2:3;
+    const br=bl===q?0:bl.startsWith(q)?1:bl.split(/\s+/).some(w=>w.startsWith(q))?2:3;
+    return ar-br || a.localeCompare(b);
+  }).slice(0,8);
+}
+function renderQualityDropdown(book,query){
+  const drop=document.getElementById('qualityDropdown');
+  const matches=qualityMatches(query,book);
+  drop.innerHTML=matches.map(k=>`<button type="button" class="quality-option" data-quality-option="${escapeHtml(k)}">${escapeHtml(k)}</button>`).join('');
+  drop.classList.toggle('open',matches.length>0);
+  drop.querySelectorAll('[data-quality-option]').forEach(btn=>btn.onclick=()=>{
+    document.getElementById('keywordSearch').value=btn.dataset.qualityOption;
+    beginKeywordSentiment(btn.dataset.qualityOption);
+  });
+}
+function renderAnalysis(book){
+  const a=book?.aiAnalysis;
+  document.getElementById('detailGuess').textContent=a?.liked_summary||inferGuess(book);
+  renderKeywords(book);
+  activeDetailRecommendations=(a?.recommendations?.length?a.recommendations:recommendationsFor(book));
+  renderDetailRecommendations();
+  loadDetailRecommendationCovers();
+}
+function scheduleAiAnalysis(book,delay=900){
+  clearTimeout(analysisTimer);
+  if(!book || !aiEndpoint){
+    setAnalysisStatus(aiEndpoint?'':'Connect AI to make this page respond to your thoughts and keywords.');
+    return;
+  }
+  setAnalysisStatus('Updating after you pause…',false);
+  analysisTimer=setTimeout(()=>runAiAnalysis(book),delay);
+}
+async function runAiAnalysis(book){
+  if(!book || !aiEndpoint) return;
+  const requestId=++analysisRequestId;
+  setAnalysisStatus('Updating this book profile…',true);
+  const controller=new AbortController();
+  const timeoutId=setTimeout(()=>controller.abort(),20000);
+  try{
+    const res=await fetch(aiEndpoint,{
+      method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
+      body:JSON.stringify({
+        book:{title:book.title,author:book.author||'',year:book.firstPublishYear||null,rating:book.rating||'',thoughts:book.thoughts||'',keywords:normalizeKeywords(book.keywords),description:book.description||'',subjects:book.subjects||[]},
+        shelf:shelfContext(book.id)
+      })
+    });
+    if(!res.ok) throw new Error(`AI request failed (${res.status})`);
+    const data=await res.json();
+    if(requestId!==analysisRequestId || activeDetailBook!==book) return;
+    if(!data?.liked_summary || !Array.isArray(data?.recommendations)) throw new Error('Unexpected AI response');
+    book.aiAnalysis=data;
+    rememberQualityTerms(data.suggested_keywords||[]);
+    book.aiAnalysisInput={rating:book.rating||'',thoughts:book.thoughts||'',keywords:normalizeKeywords(book.keywords)};
+    save();
+    renderAnalysis(book);
+    setAnalysisStatus('Updated from your latest input.');
+    setTimeout(()=>{ if(requestId===analysisRequestId) setAnalysisStatus(''); },1400);
+  }catch(e){
+    console.error(e);
+    if(requestId===analysisRequestId){
+      setAnalysisStatus(e?.name==='AbortError'?'AI update timed out. Your input was still saved.':'AI update failed. Your input was still saved.');
+      setTimeout(()=>{ if(requestId===analysisRequestId) setAnalysisStatus(''); },3000);
+    }
+  }finally{
+    clearTimeout(timeoutId);
+  }
+}
+function analysisIsStale(book){
+  const prev=book?.aiAnalysisInput;
+  const currentKeywords=JSON.stringify(normalizeKeywords(book?.keywords));
+  const previousKeywords=JSON.stringify(normalizeKeywords(prev?.keywords));
+  return !book?.aiAnalysis || !prev || prev.rating!==(book.rating||'') || prev.thoughts!==(book.thoughts||'') || previousKeywords!==currentKeywords;
+}
+
+const bookProfiles={
+  'As I Lay Dying':{
+    guess:'You probably responded to the fractured viewpoints, morally complicated family members, Southern atmosphere, and the amount of meaning carried through subtext and structure rather than direct explanation.',
+    traits:['Complex characters','Multiple perspectives','Subtext','Symbolism','Moral ambiguity'],
+    why:'Your reaction reinforces that you respond strongly to novels where character psychology and meaning are revealed indirectly rather than explained outright. Formal choices matter to you when they deepen the emotional or thematic experience.'
+  },
+  'The Heart Is a Lonely Hunter':{
+    guess:'You may have been drawn to the lonely, deeply human characters and the way McCullers lets their needs and contradictions accumulate quietly rather than reducing them to simple types.',
+    traits:['Loneliness','Character depth','Emotional restraint','Southern setting','Subtext'],
+    why:'This points toward your preference for psychologically dimensional characters whose inner lives are revealed through behavior, relationships, and implication.'
+  },
+  'White Noise':{
+    guess:'You may have liked the collision of dark comedy, fear of death, consumer culture, and absurd everyday life—especially because the satire carries real philosophical weight underneath the humor.',
+    traits:['Satire','Philosophy','Dark humor','Mortality','Cultural criticism'],
+    why:'This supports the idea that satire works especially well for you when it is doing serious intellectual or emotional work beneath the comedy.'
+  }
+};
+
+const genericFallbackRecs=[
+  {title:'Stoner',author:'John Williams',why:'A strong character-centered novel with emotional restraint, psychological depth, and a great deal happening beneath an apparently quiet surface.'},
+  {title:'The Remains of the Day',author:'Kazuo Ishiguro',why:'A restrained, character-driven novel where the most important emotional material is often implied rather than stated directly.'},
+  {title:'Revolutionary Road',author:'Richard Yates',why:'Recommended for its psychologically recognizable characters, emotional tension, and the way relationships reveal deeper dissatisfaction and self-deception.'}
+];
+
+function inferGuess(book){
+  if(bookProfiles[book.title]) return bookProfiles[book.title].guess;
+  const r=(book.rating||'').toLowerCase();
+  if(r==='loved') return `Because you marked ${book.title} as Loved, Leafmark would tentatively assume that something about its characters, voice, emotional atmosphere, or underlying ideas strongly connected with you. Until you add your own thoughts, this is treated as a low-confidence guess rather than a fact.`;
+  if(r==='liked') return `Because you marked ${book.title} as Liked, Leafmark would tentatively look for the book's strongest character, voice, mood, or thematic qualities and use those as possible signals for future recommendations.`;
+  if(r==='okay') return `You marked ${book.title} as Okay, so Leafmark would be cautious: there was probably something here that worked for you, but not enough to assume the book's overall style is a strong match.`;
+  if(r==='disliked') return `You marked ${book.title} as Disliked. Leafmark would treat the book as useful negative evidence and avoid assuming that similar books are automatically a good fit.`;
+  return `You have not added any thoughts yet. Leafmark can still make a provisional guess from the book itself and your wider reading profile, but it should keep that guess low-confidence until you rate the book or write something about it.`;
+}
+
+function traitsFor(book){
+  return bookProfiles[book.title]?.traits || ['Character focus','Voice','Emotional tone','Themes'];
+}
+
+function profileWhy(book){
+  return bookProfiles[book.title]?.why ||
+    `Without written thoughts, Leafmark would treat this book as a weaker signal. Your rating still matters, but any interpretation of why it worked—or did not work—should remain provisional until you add more context.`;
+}
+
+function recommendationsFor(book){
+  if(book.title==='As I Lay Dying') return asILayDyingRecommendations;
+  return genericFallbackRecs.map(r=>({...r,why:`Based on ${book.title}: ${r.why}`}));
+}
+
+const asILayDyingRecommendations=[
+  {
+    title:'The Sound and the Fury',
+    author:'William Faulkner',
+    why:'Because what you loved in As I Lay Dying—the fractured perspectives, difficult family dynamics, subtext, and meaning carried by form—is pushed even further here.'
+  },
+  {
+    title:'Absalom, Absalom!',
+    author:'William Faulkner',
+    why:'Recommended for the same attraction to morally complicated people and buried meaning. The story emerges through competing voices, memory, omission, and interpretation rather than straightforward explanation.'
+  },
+  {
+    title:'Suttree',
+    author:'Cormac McCarthy',
+    why:'This moves beyond Faulkner while keeping the qualities that mattered: damaged and deeply human characters, Southern atmosphere, moral complexity, and a great deal happening beneath the explicit narrative.'
+  }
+];
+
+async function loadDetailRecommendationCovers(){
+  let changed=false;
+  for(const book of activeDetailRecommendations){
+    if(!book.coverUrl && !book.coverChecked){
+      await fetchCover(book);
+      changed=true;
+    }
+  }
+  if(changed) renderDetailRecommendations();
+}
+
+let activeDetailRecommendations=[];
+function renderDetailRecommendations(){
+  const target=document.getElementById('detailRecommendations');
+  if(!target) return;
+  target.innerHTML=activeDetailRecommendations.map(r=>`
+    <article class="detail-rec">
+      <div class="detail-rec-top">
+        ${coverMarkup(r)}
+        <div><h4>${escapeHtml(r.title)}</h4><div class="detail-rec-author">${escapeHtml(r.author)}</div></div>
+      </div>
+      <p><strong>Why:</strong> ${escapeHtml(r.why)}</p>
+    </article>`).join('');
+}
+
+const detailOverlay=document.getElementById('detailOverlay');
+const detailClose=document.getElementById('detailClose');
+const detailDelete=document.getElementById('detailDelete');
+let activeDetailBook=null;
+function openBookDetail(book){
+  activeDetailBook=book;
+  document.getElementById('detailTitle').textContent=book.title;
+  document.getElementById('detailAuthor').textContent=book.author||'Author unknown';
+  document.getElementById('detailCover').innerHTML=coverMarkup(book);
+  document.getElementById('detailRating').innerHTML=ratings.map(r=>`<button class="${book.rating===r?'sel':''}" data-detail-rating="${r}">${r}</button>`).join('');
+
+  const note=document.getElementById('detailNote');
+  note.value=book.thoughts||'';
+  note.oninput=()=>{
+    book.thoughts=note.value;
+    save();
+    scheduleAiAnalysis(book);
+  };
+  const keywordSearch=document.getElementById('keywordSearch');
+  const keywordAdd=document.getElementById('keywordAdd');
+  const qualityDropdown=document.getElementById('qualityDropdown');
+  keywordSearch.value='';
+  qualityDropdown.classList.remove('open');
+  document.getElementById('sentimentPicker').classList.remove('open');
+  pendingQuality='';
+  const addTypedKeyword=()=>{
+    if(!keywordSearch.value.trim())return;
+    beginKeywordSentiment(keywordSearch.value);
+  };
+  keywordAdd.onclick=addTypedKeyword;
+  keywordSearch.oninput=()=>renderQualityDropdown(book,keywordSearch.value);
+  keywordSearch.onfocus=()=>renderQualityDropdown(book,keywordSearch.value);
+  keywordSearch.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addTypedKeyword();} if(e.key==='Escape') qualityDropdown.classList.remove('open');};
+  document.getElementById('sentimentLike').onclick=()=>{if(pendingQuality){addKeyword(book,pendingQuality,'positive');keywordSearch.value='';}};
+  document.getElementById('sentimentDislike').onclick=()=>{if(pendingQuality){addKeyword(book,pendingQuality,'negative');keywordSearch.value='';}};
+
+  renderAnalysis(book);
+  if(!aiEndpoint) setAnalysisStatus('Connect AI to make this page respond to your thoughts and keywords.');
+  else if(analysisIsStale(book)) scheduleAiAnalysis(book,250);
+  else setAnalysisStatus(book.aiAnalysis?'Based on your saved reaction.':'');
+  hydrateBookDetails(book);
+
+  document.querySelectorAll('[data-detail-rating]').forEach(btn=>btn.onclick=()=>{
+    book.rating=btn.dataset.detailRating;
+    save(); renderBooks();
+    document.querySelectorAll('[data-detail-rating]').forEach(b=>b.classList.toggle('sel',b.dataset.detailRating===book.rating));
+    renderAnalysis(book);
+    scheduleAiAnalysis(book,250);
+  });
+
+  detailOverlay.classList.add('open');
+  detailOverlay.setAttribute('aria-hidden','false');
+}
+detailDelete.onclick=()=>{if(activeDetailBook)deleteBook(activeDetailBook);};
+detailClose.onclick=()=>{clearTimeout(analysisTimer);analysisRequestId++;detailOverlay.classList.remove('open');detailOverlay.setAttribute('aria-hidden','true');activeDetailBook=null;setAnalysisStatus('');};
+detailOverlay.onclick=e=>{if(e.target===detailOverlay)detailClose.click();};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&detailOverlay.classList.contains('open'))detailClose.click();});
+
+
+document.getElementById('setAiEndpoint').onclick=()=>{
+  const current=aiEndpoint?aiEndpoint.replace(/\/api\/analyze$/,''):'';
+  const entered=prompt('Paste your Leafmark AI Worker URL (for example https://leafmark-ai.yourname.workers.dev):',current);
+  if(entered===null)return;
+  aiEndpoint=normalizeEndpoint(entered);
+  if(aiEndpoint)localStorage.setItem('leafmark-ai-endpoint',aiEndpoint);else localStorage.removeItem('leafmark-ai-endpoint');
+  updateAiConnectionUi();
+  if(activeDetailBook){renderAnalysis(activeDetailBook);scheduleAiAnalysis(activeDetailBook,100);}
+};
+updateAiConnectionUi();
+
+</script>
+
+</body>
+</html>
